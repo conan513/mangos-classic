@@ -30,6 +30,9 @@
 #include "AI/ScriptDevAI/ScriptDevAIMgr.h"
 #include "Groups/Group.h"
 #include "Tools/Formulas.h"
+#ifdef BUILD_ELUNA
+#include "LuaEngine/LuaEngine.h"
+#endif
 
 #ifdef BUILD_PLAYERBOT
 #include "PlayerBot/Base/PlayerbotAI.h"
@@ -452,6 +455,10 @@ void WorldSession::HandleQuestLogRemoveQuest(WorldPacket& recv_data)
 
 #ifdef USE_ACHIEVEMENTS
             _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_QUEST_ABANDONED, 1);
+#endif
+#ifdef BUILD_ELUNA
+            // used by eluna
+            sEluna->OnQuestAbandon(_player, quest);
 #endif
         }
 

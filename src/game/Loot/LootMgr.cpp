@@ -33,6 +33,9 @@
 #include <sstream>
 #include <iomanip>
 #include "Hardcore/HardcoreMgr.h"
+#ifdef BUILD_ELUNA
+#include "LuaEngine/LuaEngine.h"
+#endif
 
 INSTANTIATE_SINGLETON_1(LootMgr);
 
@@ -2020,6 +2023,10 @@ InventoryResult Loot::SendItem(Player* target, LootItem* lootItem, bool sendErro
 
             target->SendNewItem(newItem, uint32(lootItem->count), false, false, true);
 
+#ifdef BUILD_ELUNA
+            sEluna->OnLootItem(target, newItem, lootItem->count, GetLootGuid());
+#endif
+
             if (!m_isChest)
             {
                 // for normal loot the players right was set at loot filling so we just have to remove from allowed guids
@@ -2222,6 +2229,9 @@ void Loot::SendGold(Player* player)
             data << uint32(money_per_player);
 
             plr->GetSession()->SendPacket(data);
+#ifdef BUILD_ELUNA
+            sEluna->OnLootMoney(plr, money_per_player);
+#endif
         }
     }
     else
@@ -2237,6 +2247,9 @@ void Loot::SendGold(Player* player)
             if (Item* item = player->GetItemByGuid(m_guidTarget))
                 item->SetLootState(ITEM_LOOT_CHANGED);
         }
+#ifdef BUILD_ELUNA
+        sEluna->OnLootMoney(player, m_gold);
+#endif
     }
     m_gold = 0;
 
