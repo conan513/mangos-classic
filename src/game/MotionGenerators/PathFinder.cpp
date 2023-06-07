@@ -54,9 +54,11 @@ PathFinder::PathFinder(uint32 mapId, uint32 instanceId) :
     createFilter();
 }
 PathFinder::PathFinder(const Unit* owner, bool ignoreNormalization) :
-    m_polyLength(0), m_type(PATHFIND_BLANK),
-    m_useStraightPath(false), m_forceDestination(false), m_straightLine(false), m_pointPathLimit(MAX_POINT_PATH_LENGTH), // TODO: Fix legitimate long paths
-    m_sourceUnit(owner), m_navMesh(nullptr), m_navMeshQuery(nullptr), m_cachedPoints(m_pointPathLimit * VERTEX_SIZE), m_pathPolyRefs(m_pointPathLimit), m_smoothPathPolyRefs(m_pointPathLimit), m_defaultMapId(m_sourceUnit->GetMapId()), m_ignoreNormalization(ignoreNormalization)
+    m_type(PATHFIND_BLANK), m_useStraightPath(false), m_forceDestination(false), m_straightLine(false),
+    m_pointPathLimit(MAX_POINT_PATH_LENGTH), // TODO: Fix legitimate long paths
+    m_cachedPoints(m_pointPathLimit * VERTEX_SIZE), m_pathPolyRefs(m_pointPathLimit), m_polyLength(0),
+    m_smoothPathPolyRefs(m_pointPathLimit), m_sourceUnit(owner), m_navMesh(nullptr), m_navMeshQuery(nullptr),
+    m_defaultMapId(m_sourceUnit->GetMapId()), m_ignoreNormalization(ignoreNormalization)
 {
     DEBUG_FILTER_LOG(LOG_FILTER_PATHFINDING, "++ PathFinder::PathInfo for %u \n", m_sourceUnit->GetGUIDLow());
 
@@ -286,7 +288,7 @@ void PathFinder::setAreaCost(uint32 area, float cost)
     m_filter.setAreaCost(area, cost);
 }
 
-dtPolyRef PathFinder::getPathPolyByPosition(const dtPolyRef* polyPath, uint32 polyPathSize, const float* point, float* distance) const
+dtPolyRef PathFinder::getPathPolyByPosition(const dtPolyRef* polyPath, uint32 polyPathSize, const float* point, float* distance, const float maxDist) const
 {
     if (!polyPath || !polyPathSize)
         return INVALID_POLYREF;
@@ -314,7 +316,7 @@ dtPolyRef PathFinder::getPathPolyByPosition(const dtPolyRef* polyPath, uint32 po
     if (distance)
         *distance = dtMathSqrtf(minDist3d);
 
-    return (minDist3d < 3.0f) ? nearestPoly : INVALID_POLYREF;
+    return (minDist3d <= maxDist) ? nearestPoly : INVALID_POLYREF;
 }
 
 dtPolyRef PathFinder::getPolyByLocation(const float* point, float* distance)
@@ -326,6 +328,14 @@ dtPolyRef PathFinder::getPolyByLocation(const float* point, float* distance)
     if (polyRef != INVALID_POLYREF)
         return polyRef;
 
+    //We have more stored points. Search those too
+    if (m_pathPolyRefs.size() > std::max(m_polyLength, m_pointPathLimit)) 
+    {
+        dtPolyRef polyRef = getPathPolyByPosition(&m_pathPolyRefs[m_pointPathLimit], m_pathPolyRefs.size() - m_pointPathLimit, point, distance, 7.0f);
+        if (polyRef != INVALID_POLYREF)
+            return polyRef;
+    }
+
     // we don't have it in our old path
     // try to get it by findNearestPoly()
     // first try with NearPolySearchBound
@@ -333,8 +343,10 @@ dtPolyRef PathFinder::getPolyByLocation(const float* point, float* distance)
     dtStatus dtResult = m_navMeshQuery->findNearestPoly(point, NearPolySearchBound, &m_filter, &polyRef, closestPoint);
     if (dtStatusSucceed(dtResult) && polyRef != INVALID_POLYREF)
     {
-        *distance = dtVdist(closestPoint, point);
-        m_pathPolyRefs.push_back(polyRef);
+        float newDistance = dtVdist(closestPoint, point);
+        if (!*distance || newDistance < *distance) //Only store found point if it's actually closer than the one found from the path.
+            m_pathPolyRefs.push_back(polyRef);
+        *distance = newDistance;
         return polyRef;
     }
 
@@ -346,8 +358,10 @@ dtPolyRef PathFinder::getPolyByLocation(const float* point, float* distance)
     dtResult = m_navMeshQuery->findNearestPoly(point, FarPolySearchBound, &m_filter, &polyRef, closestPoint);
     if (dtStatusSucceed(dtResult) && polyRef != INVALID_POLYREF)
     {
-        *distance = dtVdist(closestPoint, point);
-        m_pathPolyRefs.push_back(polyRef);
+        float newDistance = dtVdist(closestPoint, point);
+        if (!*distance || newDistance < *distance) //Only store found point if it's actually closer than the one found from the path.
+            m_pathPolyRefs.push_back(polyRef);
+        *distance = newDistance;
         return polyRef;
     }
 

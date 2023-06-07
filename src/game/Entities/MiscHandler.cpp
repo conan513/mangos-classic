@@ -758,7 +758,6 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recv_data)
             std::string message = at->status_failed_text;
             sObjectMgr.GetAreaTriggerLocales(at->entry, GetSessionDbLocaleIndex(), &message);
             SendAreaTriggerMessage(message.data());
-            return;
         }
         return;
     }

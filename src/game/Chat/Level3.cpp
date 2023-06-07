@@ -59,9 +59,9 @@
 #endif
 #include "Server/PacketLog.h"
 
-#ifdef _WIN32
-#include <tchar.h>
-#endif
+#include "Globals/UnitCondition.h"
+#include "Globals/CombatCondition.h"
+#include "World/WorldStateExpression.h"
 
 #ifdef BUILD_AHBOT
 #include "AuctionHouseBot/AuctionHouseBot.h"
@@ -720,6 +720,14 @@ bool ChatHandler::HandleReloadSpellThreatsCommand(char* /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleReloadStringIds(char* /*args*/)
+{
+    sLog.outString("Re-Loading String Id Definitions...");
+    sScriptMgr.LoadStringIds();
+    SendGlobalSysMessage("DB table `string_id` (string id definitions) reloaded.");
+    return true;
+}
+
 bool ChatHandler::HandleReloadTaxiShortcuts(char* /*args*/)
 {
     sLog.outString("Re-Loading taxi flight shortcuts...");
@@ -1004,7 +1012,9 @@ bool ChatHandler::HandleReloadCreatureCooldownsCommand(char* /*args*/)
 bool ChatHandler::HandleReloadCreatureSpellLists(char* /*args*/)
 {
     sLog.outString("Reloading creature spell lists...");
+    auto conditionsAndExpressions = sObjectMgr.LoadConditionsAndExpressions();
     auto result = sObjectMgr.LoadCreatureSpellLists();
+    auto [unitConditions, worldstateExpressions, combatConditions] = conditionsAndExpressions;
     SendGlobalSysMessage("Reloaded creature spell lists.");
     if (result)
     {
