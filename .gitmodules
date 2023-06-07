@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 [submodule "src/modules/Bots"]
 	path = src/modules/Bots
 	url = https://github.com/celguar/mangosbot-bots.git
-=======
 [submodule "src/game/LuaEngine"]
 	path = src/game/LuaEngine
 	url = https://github.com/Niam5/Eluna.git
->>>>>>> 09381e035 (Add Eluna Lua Engine)
